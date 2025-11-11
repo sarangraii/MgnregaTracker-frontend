@@ -174,7 +174,7 @@
 // }
 
 // export default DistrictDetail;
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getDistrictDetails } from '../services/api';
 
 function DistrictDetail({ districtCode, onBack, speak }) {
@@ -183,11 +183,7 @@ function DistrictDetail({ districtCode, onBack, speak }) {
   const [error, setError] = useState(null);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
-  useEffect(() => {
-    fetchDistrictDetails();
-  }, [districtCode]);
-
-  const fetchDistrictDetails = async () => {
+  const fetchDistrictDetails = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getDistrictDetails(districtCode);
@@ -199,7 +195,11 @@ function DistrictDetail({ districtCode, onBack, speak }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [districtCode]);
+
+  useEffect(() => {
+    fetchDistrictDetails();
+  }, [fetchDistrictDetails]);
 
   const formatNumber = (num) => {
     return new Intl.NumberFormat('en-IN').format(num);
