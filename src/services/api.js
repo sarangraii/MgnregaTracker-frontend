@@ -182,7 +182,9 @@ api.interceptors.response.use(
 );
 
 // Retry helper function
-const retryRequest = async (requestFn, retries = 2, delay = 2000) => {
+const retryRequest = async (requestFn, retries = 2, initialDelay = 2000) => {
+  let currentDelay = initialDelay;
+  
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       console.log(attempt > 0 ? `🔄 Retry attempt ${attempt}/${retries}...` : '📡 Making request...');
@@ -195,11 +197,11 @@ const retryRequest = async (requestFn, retries = 2, delay = 2000) => {
         throw error;
       }
       
-      console.log(`⏳ Waiting ${delay/1000}s before retry...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      console.log(`⏳ Waiting ${currentDelay/1000}s before retry...`);
+      await new Promise(resolve => setTimeout(resolve, currentDelay));
       
       // Increase delay for next retry
-      delay *= 1.5;
+      currentDelay *= 1.5;
     }
   }
 };
