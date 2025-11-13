@@ -55,62 +55,50 @@
 // export default api;
 import axios from 'axios';
 
-// Use environment variable for API URL, fallback to localhost for development
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Remove /api from the fallback too
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-// Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // Increased to 30 seconds (Render can be slow on free tier)
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json'
   }
 });
 
-// Add request interceptor for debugging
+// Add interceptors for better debugging
 api.interceptors.request.use(
   (config) => {
     console.log('API Request:', config.method.toUpperCase(), config.url);
+    console.log('Full URL:', `${config.baseURL}${config.url}`);
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
+    console.error('Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
     console.log('API Response:', response.status, response.config.url);
     return response;
   },
   (error) => {
-    if (error.response) {
-      // Server responded with error status
-      console.error('API Error Response:', {
-        status: error.response.status,
-        data: error.response.data,
-        url: error.config.url
-      });
-    } else if (error.request) {
-      // Request made but no response received
-      console.error('API No Response:', {
-        url: error.config?.url,
-        message: 'Server did not respond. Please check if the backend is running.'
-      });
+    if (error.code === 'ECONNABORTED') {
+      console.error('❌ Request timeout - backend is slow or not responding');
+    } else if (!error.response) {
+      console.error('❌ No response - backend might be down or sleeping');
     } else {
-      // Error in request setup
-      console.error('API Request Setup Error:', error.message);
+      console.error('❌ API Error:', error.response.status, error.response.data);
     }
     return Promise.reject(error);
   }
 );
 
-// API methods
 export const getDistricts = async () => {
   try {
-    const response = await api.get('/districts');
+    const response = await api.get('/api/districts');
     return response.data;
   } catch (error) {
     console.error('Error fetching districts:', error);
@@ -120,17 +108,17 @@ export const getDistricts = async () => {
 
 export const getDistrictDetails = async (districtCode) => {
   try {
-    const response = await api.get(`/districts/${districtCode}`);
+    const response = await api.get(`/api/districts/${districtCode}`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching district ${districtCode}:`, error);
+    console.error('Error fetching district details:', error);
     throw error;
   }
 };
 
 export const getSummaryStats = async () => {
   try {
-    const response = await api.get('/stats/summary');
+    const response = await api.get('/api/stats/summary');
     return response.data;
   } catch (error) {
     console.error('Error fetching summary stats:', error);
@@ -138,24 +126,14 @@ export const getSummaryStats = async () => {
   }
 };
 
-export const getTopPerformers = async (metric = 'personDaysGenerated', limit = 10) => {
+export const getTopPerformers = async (metric = 'personDaysGenerated', limit = 5) => {
   try {
-    const response = await api.get('/stats/top-performers', {
+    const response = await api.get('/api/stats/top-performers', {
       params: { metric, limit }
     });
     return response.data;
   } catch (error) {
     console.error('Error fetching top performers:', error);
-    throw error;
-  }
-};
-
-export const refreshData = async () => {
-  try {
-    const response = await api.post('/refresh-data');
-    return response.data;
-  } catch (error) {
-    console.error('Error refreshing data:', error);
     throw error;
   }
 };
