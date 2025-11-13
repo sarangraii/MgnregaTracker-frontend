@@ -233,39 +233,6 @@ function DistrictDetail({ districtCode, onBack, speak }) {
     }).format(num);
   };
 
-  // Convert numbers to Hindi words
-  const numberToHindiWords = (num) => {
-    if (num === 0) return 'शून्य';
-    
-    const ones = ['', 'एक', 'दो', 'तीन', 'चार', 'पांच', 'छह', 'सात', 'आठ', 'नौ'];
-    const teens = ['दस', 'ग्यारह', 'बारह', 'तेरह', 'चौदह', 'पंद्रह', 'सोलह', 'सत्रह', 'अट्ठारह', 'उन्नीस'];
-    const tens = ['', '', 'बीस', 'तीस', 'चालीस', 'पचास', 'साठ', 'सत्तर', 'अस्सी', 'नब्बे'];
-    
-    const convertUnder100 = (n) => {
-      if (n === 0) return '';
-      if (n < 10) return ones[n];
-      if (n < 20) return teens[n - 10];
-      return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
-    };
-    
-    const convert = (n) => {
-      if (n === 0) return '';
-      if (n < 100) return convertUnder100(n);
-      if (n < 1000) {
-        return ones[Math.floor(n / 100)] + ' सौ' + (n % 100 ? ' ' + convertUnder100(n % 100) : '');
-      }
-      if (n < 100000) {
-        return convert(Math.floor(n / 1000)) + ' हज़ार' + (n % 1000 ? ' ' + convert(n % 1000) : '');
-      }
-      if (n < 10000000) {
-        return convert(Math.floor(n / 100000)) + ' लाख' + (n % 100000 ? ' ' + convert(n % 100000) : '');
-      }
-      return convert(Math.floor(n / 10000000)) + ' करोड़' + (n % 10000000 ? ' ' + convert(n % 10000000) : '');
-    };
-    
-    return convert(num).trim();
-  };
-
   // Convert numbers to English words
   const numberToEnglishWords = (num) => {
     if (num === 0) return 'zero';
