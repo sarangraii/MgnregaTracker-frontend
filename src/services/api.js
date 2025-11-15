@@ -1,157 +1,16 @@
-// import axios from 'axios';
-
-// const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
-// const api = axios.create({
-//   baseURL: API_BASE_URL,
-//   timeout: 10000,
-//   headers: {
-//     'Content-Type': 'application/json'
-//   }
-// });
-
-// export const getDistricts = async () => {
-//   try {
-//     const response = await api.get('/districts');
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching districts:', error);
-//     throw error;
-//   }
-// };
-
-// export const getDistrictDetails = async (districtCode) => {
-//   try {
-//     const response = await api.get(`/districts/${districtCode}`);
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching district details:', error);
-//     throw error;
-//   }
-// };
-
-// export const getSummaryStats = async () => {
-//   try {
-//     const response = await api.get('/stats/summary');
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching summary stats:', error);
-//     throw error;
-//   }
-// };
-
-// export const getTopPerformers = async (metric = 'personDaysGenerated', limit = 5) => {
-//   try {
-//     const response = await api.get('/stats/top-performers', {
-//       params: { metric, limit }
-//     });
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching top performers:', error);
-//     throw error;
-//   }
-// };
-
-// export default api;
-// import axios from 'axios';
-
-// // Remove /api from the fallback too
-// const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
-// const api = axios.create({
-//   baseURL: API_BASE_URL,
-//   timeout: 30000, // Increased to 30 seconds (Render can be slow on free tier)
-//   headers: {
-//     'Content-Type': 'application/json'
-//   }
-// });
-
-// // Add interceptors for better debugging
-// api.interceptors.request.use(
-//   (config) => {
-//     console.log('API Request:', config.method.toUpperCase(), config.url);
-//     console.log('Full URL:', `${config.baseURL}${config.url}`);
-//     return config;
-//   },
-//   (error) => {
-//     console.error('Request Error:', error);
-//     return Promise.reject(error);
-//   }
-// );
-
-// api.interceptors.response.use(
-//   (response) => {
-//     console.log('API Response:', response.status, response.config.url);
-//     return response;
-//   },
-//   (error) => {
-//     if (error.code === 'ECONNABORTED') {
-//       console.error('❌ Request timeout - backend is slow or not responding');
-//     } else if (!error.response) {
-//       console.error('❌ No response - backend might be down or sleeping');
-//     } else {
-//       console.error('❌ API Error:', error.response.status, error.response.data);
-//     }
-//     return Promise.reject(error);
-//   }
-// );
-
-// export const getDistricts = async () => {
-//   try {
-//     const response = await api.get('/api/districts');
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching districts:', error);
-//     throw error;
-//   }
-// };
-
-// export const getDistrictDetails = async (districtCode) => {
-//   try {
-//     const response = await api.get(`/api/districts/${districtCode}`);
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching district details:', error);
-//     throw error;
-//   }
-// };
-
-// export const getSummaryStats = async () => {
-//   try {
-//     const response = await api.get('/api/stats/summary');
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching summary stats:', error);
-//     throw error;
-//   }
-// };
-
-// export const getTopPerformers = async (metric = 'personDaysGenerated', limit = 5) => {
-//   try {
-//     const response = await api.get('/api/stats/top-performers', {
-//       params: { metric, limit }
-//     });
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching top performers:', error);
-//     throw error;
-//   }
-// };
-
-// export default api;
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 90000, // 90 seconds for initial wake-up (Render free tier sleeps)
+  timeout: 120000, // 2 minutes for Render cold starts
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Add interceptors for better debugging
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     console.log('🔄 API Request:', config.method.toUpperCase(), config.url);
@@ -164,6 +23,7 @@ api.interceptors.request.use(
   }
 );
 
+// Response interceptor with better error messages
 api.interceptors.response.use(
   (response) => {
     console.log('✅ API Response:', response.status, response.config.url);
@@ -171,61 +31,82 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.code === 'ECONNABORTED') {
-      console.error('⏱️ Request timeout - backend is waking up or slow');
+      console.error('⏱️ Request timeout after 2 minutes');
+      error.userMessage = 'Server is taking too long. Please try again in a minute.';
+    } else if (error.code === 'ERR_NETWORK') {
+      console.error('🌐 Network error');
+      error.userMessage = 'Network error. Check your internet connection.';
     } else if (!error.response) {
-      console.error('💤 No response - backend might be sleeping (Render free tier)');
+      console.error('💤 No response - backend might be sleeping');
+      error.userMessage = 'Server is starting up. Please wait 60 seconds and try again.';
+    } else if (error.response.status === 502 || error.response.status === 503) {
+      console.error('🔧 Server unavailable (502/503)');
+      error.userMessage = 'Server is restarting. Please try again in a moment.';
     } else {
       console.error('❌ API Error:', error.response.status, error.response.data);
+      error.userMessage = `Server error: ${error.response.status}`;
     }
     return Promise.reject(error);
   }
 );
 
-// Retry helper function
-const retryRequest = async (requestFn, retries = 2, initialDelay = 2000) => {
+// Enhanced retry with exponential backoff
+const retryRequest = async (requestFn, maxRetries = 3, initialDelay = 3000) => {
   let currentDelay = initialDelay;
   
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      console.log(attempt > 0 ? `🔄 Retry attempt ${attempt}/${retries}...` : '📡 Making request...');
+      if (attempt > 0) {
+        console.log(`🔄 Retry ${attempt}/${maxRetries} (waiting ${currentDelay/1000}s)...`);
+        await new Promise(resolve => setTimeout(resolve, currentDelay));
+      }
+      
       const result = await requestFn();
+      
+      if (attempt > 0) {
+        console.log(`✅ Success on attempt ${attempt + 1}`);
+      }
+      
       return result;
     } catch (error) {
-      // If it's the last attempt or not a timeout/network error, throw
-      if (attempt === retries || 
-          (error.code !== 'ECONNABORTED' && error.code !== 'ERR_NETWORK')) {
+      const isLastAttempt = attempt === maxRetries;
+      const isRetryable = 
+        error.code === 'ECONNABORTED' || 
+        error.code === 'ERR_NETWORK' ||
+        !error.response ||
+        error.response?.status === 502 ||
+        error.response?.status === 503;
+      
+      if (isLastAttempt || !isRetryable) {
+        console.error(`❌ Failed after ${attempt + 1} attempts`);
         throw error;
       }
       
-      console.log(`⏳ Waiting ${currentDelay/1000}s before retry...`);
-      await new Promise(resolve => setTimeout(resolve, currentDelay));
-      
-      // Increase delay for next retry
-      currentDelay *= 1.5;
+      currentDelay *= 2; // Exponential backoff: 3s, 6s, 12s
     }
   }
 };
 
-// Main API functions with retry logic
+// API functions with retry
 export const getDistricts = async () => {
   return retryRequest(async () => {
     const response = await api.get('/api/districts');
     return response.data;
-  });
+  }, 3, 3000);
 };
 
 export const getDistrictDetails = async (districtCode) => {
   return retryRequest(async () => {
     const response = await api.get(`/api/districts/${districtCode}`);
     return response.data;
-  });
+  }, 2, 2000);
 };
 
 export const getSummaryStats = async () => {
   return retryRequest(async () => {
     const response = await api.get('/api/stats/summary');
     return response.data;
-  });
+  }, 2, 2000);
 };
 
 export const getTopPerformers = async (metric = 'personDaysGenerated', limit = 5) => {
@@ -234,30 +115,36 @@ export const getTopPerformers = async (metric = 'personDaysGenerated', limit = 5
       params: { metric, limit }
     });
     return response.data;
-  });
+  }, 2, 2000);
 };
 
-// Health check endpoint to keep backend awake
+// Health check - lightweight, no retry
 export const pingBackend = async () => {
   try {
-    await api.get('/health', { timeout: 5000 });
+    const response = await api.get('/health', { timeout: 10000 });
     console.log('💚 Backend is awake');
+    return true;
   } catch (error) {
     console.log('💤 Backend wake-up ping sent');
+    return false;
   }
 };
 
-// Keep-alive function to prevent backend from sleeping
+// Keep-alive to prevent sleeping (pings every 8 minutes)
 export const startKeepAlive = () => {
-  // Ping immediately on start
+  console.log('🔥 Starting keep-alive pinger...');
+  
   pingBackend();
   
-  // Then ping every 10 minutes
   const interval = setInterval(() => {
+    console.log(`⏰ Keep-alive ping at ${new Date().toLocaleTimeString()}`);
     pingBackend();
-  }, 10 * 60 * 1000); // 10 minutes
+  }, 8 * 60 * 1000); // 8 minutes
   
-  return () => clearInterval(interval);
+  return () => {
+    console.log('🛑 Stopping keep-alive');
+    clearInterval(interval);
+  };
 };
 
 export default api;
